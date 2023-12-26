@@ -12,7 +12,9 @@ Sub CalculateStockSummary()
     Dim lastRow As Long
     Dim arrData As Variant
     Dim i As Long, j As Long
-    Dim ticker As Variant
+    Dim ticker As String
+    Dim openPrice As Double
+    Dim closePrice As Double
     Dim yearlyChange As Double
     Dim percentChange As Double
     Dim totalVolume As Double
@@ -25,25 +27,32 @@ Sub CalculateStockSummary()
     Dim maxPercentDecrease As Double
     Dim maxPercentDecreaseTicker As String
     Dim maxTotalVolume As Double
-    Dim maxTotalVolumeTicker As Variant
+    Dim maxTotalVolumeTicker As String
 
     ' Set reference to the active sheet
     For Each ws In Worksheets
         ws.Activate
-        Set ws = ActiveSheet
+       Set ws = ActiveSheet
 
         StockTickerHeaders
 
         ' Find the last row in column A
         lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
 
-        ' Read data into an array
+          ' Read all data in the sheet into an array
         arrData = ws.Range("A2:G" & lastRow).Value
 
-        ' Initialize output row
+        ' Initialize output row to 2 to skip the header
         outputRow = 2
+        
+        ' Initialize ticker value
+        ticker = Range("A2").Value
+        
+        ' Initialize open and close price
+        openPrice = Range("C2").Value
+        closePrice = Range("F2").Value
 
-        ' Initialize variables for maximum and minimum values
+        ' Initialize variables for maximum and minimum percent values and maximum volume
         maxPercentIncrease = 0
         maxPercentIncreaseTicker = ""
         maxPercentDecrease = 0
@@ -51,8 +60,10 @@ Sub CalculateStockSummary()
         maxTotalVolume = 0
         maxTotalVolumeTicker = ""
 
+
+
         ' Loop through each row in the array
-        For i = 1 To UBound(arrData, 1)
+        For i = 1 To UBound(arrData)
             ' Skip if the row has been processed
             If arrData(i, 1) = "" Then GoTo ContinueLoop
 
@@ -64,30 +75,34 @@ Sub CalculateStockSummary()
             volume = arrData(i, 7)
 
             ' Reset variables for each ticker
-            yearlyChange = closePrice - openPrice
+            
             percentChange = 0
             totalVolume = 0
 
             ' Loop through each row again to find the same ticker
-            For j = 1 To UBound(arrData, 1)
+            For j = 1 To UBound(arrData)
                 If arrData(j, 1) = ticker Then
                     ' Calculate total volume
                     totalVolume = totalVolume + arrData(j, 7)
-
+                    closePrice = arrData(j, 6)
                     ' Mark the ticker as processed
                     arrData(j, 1) = ""
+                                       
                 End If
             Next j
 
-            ' Calculate percent change (avoid division by zero)
+            'Calculate yearly change by subtracting last close price of the ticker with the first open price
+            yearlyChange = closePrice - openPrice
+            ' Calculate percent change and also look for avoiding division by zero
             If openPrice <> 0 Then
-                percentChange = (yearlyChange / openPrice) * 100
+                percentChange = (yearlyChange / openPrice)
             End If
 
             ' Write results to columns I through L
             ws.Cells(outputRow, 9).Value = ticker
             ws.Cells(outputRow, 10).Value = yearlyChange
             ws.Cells(outputRow, 11).Value = percentChange
+              ws.Cells(outputRow, 11).NumberFormat = "0.00%"
             ws.Cells(outputRow, 12).Value = totalVolume
 
             ' Color formatting
@@ -136,6 +151,7 @@ ContinueLoop:
         ws.Range("Q3").Value = maxPercentDecrease
         ws.Range("Q4").Value = maxTotalVolume
         
-        Next ws
+       Next ws
 End Sub
+
 
